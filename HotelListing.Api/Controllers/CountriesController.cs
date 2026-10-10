@@ -1,99 +1,53 @@
+using HotelListing.Api.Contracts;
+using HotelListing.Api.DTOs.Country;
+using HotelListing.Api.Results;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using HotelListing.Api.Data;
 
 namespace HotelListing.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class CountriesController(HotelListingDbContext context) : ControllerBase
+public class CountriesController(ICountriesService countriesService) : BaseApiController
 {
-    // GET: api/Country
+    // GET: api/Countries
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Country>>> GetCountry()
+    public async Task<ActionResult<IEnumerable<GetCountriesDto>>> GetCountries()
     {
-        var coutries = await context.Countries.ToListAsync();
-
-        return coutries;
-
+        var result = await countriesService.GetCountriesAsync();
+        return ToActionResult(result);
     }
 
-    // GET: api/Country/5
-    [HttpGet("{countryid}")]
-    public async Task<ActionResult<Country>> GetCountry(int countryid)
+    // GET: api/Countries/5
+    [HttpGet("{id}")]
+    public async Task<ActionResult<GetCountryDto>> GetCountry(int id)
     {
-        var country = await context.Countries
-            .Include(c => c.Hotels)
-            .FirstOrDefaultAsync(c => c.CountryId == countryid);
-
-        if (country == null)
-        {
-            return NotFound();
-        }
-
-        return country;
+        var result = await countriesService.GetCountryAsync(id);
+        return ToActionResult(result);
     }
 
-    // PUT: api/Country/5
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-    [HttpPut("{countryid}")]
-    public async Task<IActionResult> PutCountry(int? countryid, Country country)
+    // PUT: api/Countries/5
+    [HttpPut("{id}")]
+    public async Task<IActionResult> PutCountry(int id, UpdateCountryDto updateDto)
     {
-        if (countryid != country.CountryId)
-        {
-            return BadRequest();
-        }
-
-        context.Entry(country).State = EntityState.Modified;
-
-        try
-        {
-            await context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!await CountryExists(countryid))
-            {
-                return NotFound();
-            }
-            else
-            {
-                throw;
-            }
-        }
-
-        return NoContent();
+        var result = await countriesService.UpdateCountryAsync(id, updateDto);
+        return ToActionResult(result);
     }
 
-    // POST: api/Country
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+    // POST: api/Countries
     [HttpPost]
-    public async Task<ActionResult<Country>> PostCountry(Country country)
+    public async Task<ActionResult<GetCountryDto>> PostCountry(CreateCountryDto createDto)
     {
-        context.Countries.Add(country);
-        await context.SaveChangesAsync();
+        var result = await countriesService.CreateCountryAsync(createDto);
+        if (!result.IsSuccess) return MapErrorsToResponse(result.Errors);
 
-        return CreatedAtAction("GetCountry", new { countryid = country.CountryId }, country);
+        return CreatedAtAction(nameof(GetCountry), new { id = result.Value!.Id }, result.Value);
     }
 
-    // DELETE: api/Country/5
-    [HttpDelete("{countryid}")]
-    public async Task<IActionResult> DeleteCountry(int? countryid)
+    // DELETE: api/Countries/5
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteCountry(int id)
     {
-        var country = await context.Countries.FindAsync(countryid);
-        if (country == null)
-        {
-            return NotFound();
-        }
-
-        context.Countries.Remove(country);
-        await context.SaveChangesAsync();
-
-        return NoContent();
-    }
-
-    private async Task<bool> CountryExists(int? countryid)
-    {
-        return await context.Countries.AnyAsync(e => e.CountryId == countryid);
+        var result = await countriesService.DeleteCountryAsync(id);
+        return ToActionResult(result);
     }
 }
